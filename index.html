@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d266e"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="资金监控">
+<link rel="manifest" href="/manifest.json"><link rel="apple-touch-icon" href="/icon.svg">
+<title>板块资金监控</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:#f2f3f7;color:#222;padding:10px;max-width:780px;margin:auto;font-size:14px}
+.hd{background:linear-gradient(135deg,#102650,#2e60b5);color:#fff;border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 4px 15px #10265025}.hd h1{font-size:20px}.sub{font-size:11px;opacity:.78;margin-top:4px}.idx{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}.idx div{background:#ffffff16;border:1px solid #ffffff18;border-radius:10px;padding:7px}.idx b{display:block;font-size:15px;margin-top:2px}.card{background:#fff;border-radius:15px;padding:13px;margin-bottom:10px;box-shadow:0 1px 5px #0000000b}.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}.bar h2{font-size:16px}.btn{border:0;background:#edf3ff;color:#24539e;border-radius:9px;padding:7px 10px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.item{border:1px solid #eee;border-radius:12px;padding:11px}.nm{font-weight:700;display:flex;justify-content:space-between}.pct{font-size:25px;font-weight:850;margin:6px 0}.line{display:flex;justify-content:space-between;border-top:1px dashed #eee;padding-top:5px;font-size:11px;color:#777}.line b{font-size:12px}.row{display:flex;gap:8px;align-items:center;padding:8px 3px;border-bottom:1px solid #f0f0f2}.rank{width:23px;height:23px;border-radius:6px;background:#edf2fa;color:#4666a7;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px}.name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.money{font-weight:800}.up{color:#e02e2c}.down{color:#078a4a}.flat{color:#777}.muted{color:#999;font-size:11px}.status{font-size:12px}.ok{color:#078a4a}.bad{color:#c0392b}.note{font-size:11px;color:#888;line-height:1.8}details{margin-top:8px}
+@media(max-width:380px){.idx{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}
+</style></head><body>
+<header class="hd"><h1>我的板块资金监控</h1><div class="sub" id="time">连接中…</div><div class="idx" id="idx"></div></header>
+<section class="card"><div class="bar"><h2>🔥 重点板块</h2><button class="btn" onclick="load()">立即刷新</button></div><div class="grid" id="focus">加载中…</div></section>
+<section class="card"><div class="bar"><h2>💰 全市场资金流入 TOP 20</h2></div><div id="top">加载中…</div></section>
+<section class="card"><div class="bar"><h2>📊 板块涨幅 TOP 20</h2></div><div id="rise">加载中…</div></section>
+<section class="card"><div class="status" id="status">● 等待数据</div><div class="note">盘中每30秒自动刷新；非交易时段数据可能不变化。数据来自公开行情接口，可能出现限流、延迟或接口调整。</div></section>
+<script>
+const cls=x=>x>0?"up":x<0?"down":"flat", pct=x=>x==null?"--":(x>=0?"+":"")+Number(x).toFixed(2)+"%", money=x=>{if(x==null)return"--";let a=Math.abs(x);return (x/1e8).toFixed(2)+"亿"};
+function row(x,i){return `<div class="row"><span class="rank">${i+1}</span><span class="name">${x.name||"--"}</span><b class="money ${cls(x.main_net)}">${money(x.main_net)}</b></div>`}
+function render(d){
+ document.getElementById("time").textContent="最后更新 "+new Date(d.updated_at).toLocaleString("zh-CN",{hour12:false})+" · 自动刷新30秒";
+ document.getElementById("idx").innerHTML=(d.indices||[]).map(x=>`<div>${x.name}<b class="${cls(x.pct)}">${pct(x.pct)}</b></div>`).join("");
+ document.getElementById("focus").innerHTML=(d.focus||[]).map(x=>`<div class="item"><div class="nm">${x.name}<span class="muted">${x.code||""}</span></div><div class="pct ${cls(x.pct)}">${pct(x.pct)}</div><div class="line"><span>主力净流入</span><b class="${cls(x.main_net)}">${money(x.main_net)}</b></div><div class="line"><span>净流入占比</span><b>${x.ratio==null?"--":Number(x.ratio).toFixed(2)+"%"}</b></div></div>`).join("");
+ document.getElementById("top").innerHTML=(d.top_inflow||[]).map(row).join("");
+ document.getElementById("rise").innerHTML=(d.top_rise||[]).map((x,i)=>`<div class="row"><span class="rank">${i+1}</span><span class="name">${x.name||"--"}</span><b class="${cls(x.pct)}">${pct(x.pct)}</b></div>`).join("");
+ document.getElementById("status").innerHTML=`<span class="ok">● 数据正常</span>　数据源：${d.source||"公开行情"}　缓存：${d.cache_seconds||0}秒`;
+}
+async function load(){try{document.getElementById("status").textContent="⟳ 更新中…";let r=await fetch("/api/market",{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status);render(await r.json())}catch(e){document.getElementById("status").innerHTML='<span class="bad">● 更新失败：'+e.message+"</span>"}}
+load();setInterval(load,30000);
+if("serviceWorker"in navigator)navigator.serviceWorker.register("/sw.js").catch(()=>{});
+</script></body></html>
