@@ -35,12 +35,8 @@ async def indices():
     return [{"name":x.get("f14"),"pct":x.get("f3")} for x in diffs(j) if x.get("f14") in wanted][:5]
 
 async def boards():
-    # t:2 为行业板块；pn=1 是公开接口常用的必要参数
     j=await get("/api/qt/clist/get",{"pn":1,"pz":100,"po":1,"np":1,"fid":"f62","fs":"m:90 t:2","fields":"f2,f3,f12,f14,f62,f184"})
-    out=[]
-    for x in diffs(j):
-        out.append({"name":x.get("f14"),"code":x.get("f12"),"pct":x.get("f3"),"main_net":x.get("f62"),"ratio":x.get("f184")})
-    return out
+    return [{"name":x.get("f14"),"code":x.get("f12"),"pct":x.get("f3"),"main_net":x.get("f62"),"ratio":x.get("f184")} for x in diffs(j)]
 
 async def main():
     idx,bs=await asyncio.gather(indices(),boards())
@@ -63,10 +59,10 @@ async def market():
         return {"updated_at":time.strftime("%Y-%m-%dT%H:%M:%S+08:00"),"indices":[],"focus":[],"top_inflow":[],"top_rise":[],"source":"暂时无法连接行情源","cache_seconds":TTL,"error":str(e)}
 
 @app.get("/")
-def home(): return FileResponse(ROOT/"static/index.html")
+def home(): return FileResponse(ROOT/"index.html")
 @app.get("/manifest.json")
-def manifest(): return FileResponse(ROOT/"static/manifest.json")
+def manifest(): return FileResponse(ROOT/"manifest.json")
 @app.get("/sw.js")
-def sw(): return FileResponse(ROOT/"static/sw.js")
+def sw(): return FileResponse(ROOT/"sw.js")
 @app.get("/icon.svg")
-def icon(): return FileResponse(ROOT/"static/icon.svg")
+def icon(): return FileResponse(ROOT/"icon.svg")
