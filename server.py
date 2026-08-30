@@ -6,28 +6,27 @@ from fastapi.responses import FileResponse
 
 app=FastAPI(title="板块资金监控")
 ROOT=Path(__file__).parent
-HEAD={"User-Agent":"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile Safari/605.1","Referer":"https://quote.eastmoney.com/"}
-EM="https://push2.eastmoney.com"
+HEAD={"User-Agent":"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile Safari/605.1","Referer":"https://quote.eastmoney.com/","Accept":"application/json,text/plain,*/*"}
+EM="https://82.push2.eastmoney.com"
+UT="bd1d9ddb04089700cf9c27f6f7426281"
 CACHE={"ts":0,"data":None}
 TTL=20
-
 FOCUS_NAMES=["人工智能","半导体","机器人","光伏设备","证券","军工","新能源汽车","算力","消费电子","低空经济","商业航天","创新药"]
 
 async def get(path,params):
+    params={**params,"ut":UT,"fltt":2,"invt":2}
     last=None
     for i in range(3):
         try:
-            async with httpx.AsyncClient(headers=HEAD,timeout=8,follow_redirects=True) as c:
+            async with httpx.AsyncClient(headers=HEAD,timeout=10,follow_redirects=True) as c:
                 r=await c.get(EM+path,params=params); r.raise_for_status(); j=r.json()
                 if j.get("rc") not in (None,0): raise RuntimeError(str(j))
                 return j
         except Exception as e:
-            last=e
-            await asyncio.sleep(.4*(i+1))
+            last=e; await asyncio.sleep(.5*(i+1))
     raise last
 
-def diffs(j):
-    return ((j.get("data") or {}).get("diff") or [])
+def diffs(j): return ((j.get("data") or {}).get("diff") or [])
 
 async def indices():
     j=await get("/api/qt/ulist.np/get",{"pn":1,"pz":20,"po":1,"np":1,"fid":"f3","fs":"m:1 s:2,m:0 t:6","fields":"f2,f3,f12,f14"})
